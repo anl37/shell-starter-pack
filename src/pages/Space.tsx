@@ -18,6 +18,7 @@ import { getPlaceNameFromCoords } from "@/lib/geocoding-utils";
 import { DURHAM_RECS } from "@/config/city";
 import { useToast } from "@/hooks/use-toast";
 import { useConnectionRequest } from "@/hooks/useConnectionRequest";
+import { useLocationRecording } from "@/hooks/useLocationRecording";
 
 // Mock data
 const mockUsers = [
@@ -100,6 +101,12 @@ const Space = () => {
     enabled: connectEnabled,
   });
   
+  // Background location recording for activity learning
+  useLocationRecording({
+    location,
+    enabled: status === 'live' && !isMockLocation, // Only record real locations
+  });
+  
   const { toast } = useToast();
   const { sendConnectionRequest } = useConnectionRequest();
   
@@ -111,13 +118,14 @@ const Space = () => {
     headline: `${user.sharedInterests.join(', ')} • ${Math.round(user.distance)}m away`,
     lastSeen: "Now",
     activities: user.interests,
-    score: 100 - index * 5, // Mock score based on order
+    score: user.compatibilityScore ?? (100 - index * 5), // Use adaptive score or fallback
     weeklyVisits: [1, 2, 1, 2, 3, 2, 1], // Mock data
     bio: `Shares interests: ${user.sharedInterests.join(', ')}`,
     typicalTimes: "Various times",
     emojiSignature: user.emoji_signature || "👤",
     sharedInterests: user.sharedInterests, // Pass shared interests
     distance: user.distance, // Pass actual distance
+    compatibilityScore: user.compatibilityScore, // Include adaptive score
   }));
 
 

@@ -16,6 +16,7 @@ export interface NearbyUser {
   sharedInterests: string[];
   emoji_signature?: string;
   avatar_url?: string;
+  compatibilityScore?: number;
 }
 
 interface UseNearbyMatchesOptions {
@@ -109,6 +110,17 @@ export const useNearbyMatches = ({ location, enabled }: UseNearbyMatchesOptions)
           continue;
         }
 
+        // Calculate adaptive compatibility score
+        let compatibilityScore: number | undefined;
+        try {
+          const { data } = await supabase.functions.invoke('calculate-compatibility', {
+            body: { targetUserId: profile.id },
+          });
+          compatibilityScore = data?.score;
+        } catch (err) {
+          console.error('[Nearby] Compatibility calculation failed:', err);
+        }
+
         nearby.push({
           id: profile.id,
           name: profile.name,
@@ -119,11 +131,17 @@ export const useNearbyMatches = ({ location, enabled }: UseNearbyMatchesOptions)
           sharedInterests,
           emoji_signature: profile.emoji_signature || undefined,
           avatar_url: profile.avatar_url || undefined,
+          compatibilityScore,
         });
       }
 
-      // Sort by distance
-      nearby.sort((a, b) => a.distance - b.distance);
+      // Sort by compatibility score (if available), then by distance
+      nearby.sort((a, b) => {
+        if (a.compatibilityScore !== undefined && b.compatibilityScore !== undefined) {
+          return b.compatibilityScore - a.compatibilityScore;
+        }
+        return a.distance - b.distance;
+      });
 
       setNearbyUsers(nearby);
     } catch (error) {
